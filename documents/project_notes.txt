@@ -1,0 +1,5 @@
+The home RAG project is called Lantern.
+It runs on Windows using Python and Ollama.
+Its first goal is to answer questions about local text files.
+The project mascot is a purple turtle named Pixel.
+Study sessions happen on Saturdays at 10 AM.

@@ -1,0 +1,9 @@
+The project computer runs Windows.
+It has 32 GB of system RAM.
+Its graphics card is an NVIDIA RTX 3080 with 10 GB of GPU memory.
+
+Ollama runs the language model locally.
+Python sends questions and document passages to Ollama.
+VS Code is used to edit the project files.
+
+Project backups are stored on an external drive every Sunday.
