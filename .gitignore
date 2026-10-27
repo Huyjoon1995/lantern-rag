@@ -1,0 +1,13 @@
+# JavaScript dependencies and build output
+node_modules/
+dist/
+
+# Python environment and cache
+.venv/
+__pycache__/
+*.pyc
+
+# Local secrets
+.env
+.env.*
+!.env.example
