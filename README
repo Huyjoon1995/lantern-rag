@@ -1,0 +1,211 @@
+# Lantern
+
+A local AI chat app for general questions and document-based Q&A. Upload a text file or PDF, ask questions, and receive answers with source citations.
+
+Built as a side project to learn how retrieval-augmented generation (RAG) works.
+
+## Features
+
+- General chat with a locally running language model
+- Text and PDF document uploads
+- Semantic search using embeddings and cosine similarity
+- Document answers with passage and PDF page citations
+- Loading indicators while generating answers
+- Interactive API documentation through FastAPI
+
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React, TypeScript, MUI, Vite |
+| Backend | Python, FastAPI, Uvicorn |
+| Model runtime | Ollama |
+| Chat model | Qwen3 4B Instruct 2507 |
+| Embedding model | EmbeddingGemma |
+| PDF extraction | pypdf |
+
+## How it works
+
+### Document processing
+
+1. Upload a `.txt` or `.pdf` file.
+2. Extract its text, preserving PDF page numbers.
+3. Split the text into overlapping passages.
+4. Generate embeddings for each passage.
+5. Store the passages and embeddings in server memory.
+
+### Document questions
+
+1. Generate an embedding for the question.
+2. Rank the document passages using cosine similarity.
+3. Select the two highest-ranked passages.
+4. Send the question and selected passages to Qwen.
+5. Return an answer with source citations.
+
+General mode sends questions directly to Qwen without document retrieval.
+
+## Requirements
+
+- Python 3.13 — used during development
+- Node.js and npm compatible with the frontend's Vite version
+- Ollama
+- Enough available memory to run the selected models
+
+A compatible GPU can improve inference speed.
+
+## Setup
+
+The commands below use Windows PowerShell.
+
+### 1. Clone the repository
+
+```powershell
+git clone https://github.com/Huyjoon1995/lantern-rag.git
+cd lantern-rag
+```
+
+### 2. Create the Python environment
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install fastapi uvicorn python-multipart pypdf
+```
+
+### 3. Download the models
+
+Install Ollama from https://ollama.com, then run:
+
+```powershell
+ollama pull qwen3:4b-instruct-2507-q4_K_M
+ollama pull embeddinggemma
+```
+
+Keep the Ollama application running. If it is not running in the background, start it in a separate terminal:
+
+```powershell
+ollama serve
+```
+
+### 4. Install frontend dependencies
+
+```powershell
+cd frontend
+npm install
+```
+
+## Run locally
+
+Start each server in a separate terminal.
+
+### Backend
+
+From the repository root:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn api:app --reload
+```
+
+- API: http://localhost:8000
+- Interactive documentation: http://localhost:8000/docs
+- OpenAPI specification: http://localhost:8000/openapi.json
+
+### Frontend
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173.
+
+The Vite development proxy forwards `/api` requests to FastAPI on port 8000.
+
+## Usage
+
+### General chat
+
+Select **General**, enter a question, and send it.
+
+### Document chat
+
+1. Attach a `.txt` or `.pdf` file.
+2. Wait for the upload and processing to complete.
+3. Select **My documents**.
+4. Ask a question about the uploaded file.
+5. Check the answer and its source citation.
+
+If the retrieved passages do not contain the answer, the model is instructed to say it does not know.
+
+## API
+
+### `POST /documents`
+
+Accepts a multipart upload using the field name `file`.
+
+Example response:
+
+```json
+{
+  "document_id": "generated-document-id",
+  "filename": "guide.pdf",
+  "passage_count": 12
+}
+```
+
+### `POST /chat`
+
+General question:
+
+```json
+{
+  "question": "Explain Python dictionaries.",
+  "document_id": null
+}
+```
+
+Document question:
+
+```json
+{
+  "question": "When are backups scheduled?",
+  "document_id": "generated-document-id"
+}
+```
+
+Example response:
+
+```json
+{
+  "answer": "Backups are scheduled every Sunday. [guide.pdf, page 2, passage 1]"
+}
+```
+
+## Current limitations
+
+- Documents and embeddings are stored in memory and disappear when the backend restarts.
+- One attached document is selected at a time.
+- Chat history is displayed in the UI but is not sent to the model as conversational context.
+- Answers arrive as complete responses; token streaming is not implemented.
+- Uploads are limited to 1 MB, 100 PDF pages, and 500 passages.
+- Scanned PDFs without a text layer require OCR, which is not implemented.
+- PDF tables, columns, and complex layouts may extract imperfectly.
+- Retrieval always selects the top two passages, even when their relevance is weak.
+- Model answers and citations can be incorrect and should be checked.
+- General chat has no live web access.
+- This is a local, single-user prototype without authentication.
+
+## Possible next steps
+
+- Persist documents and embeddings
+- Stream generated answers
+- Support conversational context
+- Add clickable source previews
+- Support multiple documents per chat
+- Add OCR for scanned PDFs
+- Evaluate retrieval quality with a repeatable set of questions
+
+## Learning notes
+
+One early PDF test retrieved passages near the answer but missed the answer itself. Replacing fixed character chunks with overlapping word chunks improved retrieval for that question.
+
+This reinforced a useful debugging approach: inspect the retrieved evidence before changing the model or prompt.
