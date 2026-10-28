@@ -43,6 +43,7 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("general");
   const [question, setQuestion] = useState("");
   const [document, setDocument] = useState<File | null>(null);
+  const [documentId, setDocumentId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,10 +54,6 @@ export default function App() {
   const  handleSend = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canSend) return;
-    if (mode === "documents") {
-      setError("Document chat is not connected yet. Please use General mode.");
-      return;
-    }
 
     const submittedQuestion = question.trim();
     
@@ -71,14 +68,13 @@ export default function App() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json"},
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question: submittedQuestion, document_id: mode === "documents" ? documentId : null }),
       });
       if(!response.ok) {
         throw new Error(`Response status: ${response.status}`);
       }
 
       const result = await response.json();
-      console.log(result);
       setMessages((previous) => [
       ...previous,
       {
@@ -100,6 +96,39 @@ export default function App() {
     setQuestion("");
     setDocument(null);
     setMode("general");
+  }
+
+  const handleUploadDocument = async (event: React.ChangeEvent<HTMLInputElement>) => {
+     const file = event.target.files?.[0];
+      event.target.value = "";
+
+     if(!file) return;
+
+     const formData = new FormData();
+     formData.append("file", file);
+      try {
+        setError(null);
+
+        const response = await fetch("/api/documents", {
+          method: "POST",
+          body: formData,
+        });
+
+        if(!response.ok) {
+          throw new Error(`Upload failed (${response.status})`);
+        }
+
+        const data: {
+          document_id: string;
+          filename: string;
+          passage_count: number;
+        } = await response.json();
+        setDocument(file);
+        setDocumentId(data.document_id);
+        setMode("documents");
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Upload failed.",);
+      }
   }
 
   return (
@@ -248,17 +277,8 @@ export default function App() {
                 <input
                   hidden
                   type="file"
-                  accept=".txt,text/plain"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-
-                    if (file) {
-                      setDocument(file);
-                      setMode("documents");
-                    }
-
-                    event.target.value = "";
-                  }}
+                  accept=".txt,.pdf,text/plain,application/pdf"
+                  onChange={handleUploadDocument}
                 />
               </Button>
 
